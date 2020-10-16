@@ -1,30 +1,26 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { findByText, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as api from "./apiRequest";
 import App from "./App";
-import { act } from "react-dom/test-utils";
+// import { act } from "react-dom/test-utils";
 
 jest.mock("./apiRequest");
 const apiMock = api as jest.Mocked<typeof api>;
 
 describe("App", () => {
-  it.skip("should render UI", () => {
+  it("should render UI", () => {
     render(<App />);
     const pageTitle = screen.getByText("Search a user");
     const inputElement = screen.getByPlaceholderText("Enter username");
     const searchButton = screen.getByText("Search");
 
-    /**
-     * NOTE:
-     * toBeDefined() also works
-     */
     expect(pageTitle).toBeInTheDocument();
-    expect(inputElement).toBeInTheDocument();
+    expect(inputElement).toBeDefined(); // Works as well.
     expect(searchButton).toBeInTheDocument();
   });
 
-  it("should show status for is searching", async () => {
+  it.only("should fetch users", async () => {
     apiMock.fetchUser.mockResolvedValueOnce([]);
 
     const { debug } = render(<App />);
@@ -32,7 +28,7 @@ describe("App", () => {
     const searchButton = screen.getByText("Search");
 
     /**
-     * Selector queryBy* queries return the first matching node for a query,
+     * Selector queryBy* return the first matching node for a query
      * and return null if no elements match.
      * This is useful for asserting an element that is not present.
      */
@@ -116,26 +112,29 @@ describe("App", () => {
 
     // // Or we could use a find instead of above
     // All the async utils are built on top of waitFor.
+    // Those two bits of code are basically equivalent (find* queries use waitFor under the hood), but the second is simpler and the error message you get will be better.
+    // Advice: use find* any time you want to query for something that may not be available right away.
     // https://kentcdodds.com/blog/common-mistakes-with-react-testing-library#using-waitfor-to-wait-for-elements-that-can-be-queried-with-find
     // await screen.findByText("Searching...");
   });
 
-  // it("AAA format: should show status for is searching", async () => {
-  //   apiMock.fetchUser.mockResolvedValueOnce([]);
-  //   render(<App />);
-  //   const inputElement = screen.getByPlaceholderText("Enter username");
-  //   const searchButton = screen.getByText("Search");
-  //   const loadingText = screen.queryByText("Searching...");
+  it.only("AAA format: should show message for no search results", async () => {
+    apiMock.fetchUser.mockResolvedValueOnce([]);
+    render(<App />);
+    const inputElement = screen.getByPlaceholderText("Enter username");
+    const searchButton = screen.getByText("Search");
+    const loadingText = screen.queryByText("Searching...");
 
-  //   void userEvent.type(inputElement, "username");
-  //   await userEvent.click(searchButton);
+    void userEvent.type(inputElement, "username");
+    void userEvent.click(searchButton);
 
-  //   /**
-  //    * One can argue that this AAA-format sometimes makes it harder
-  //    * to understand what is happening behind the scenes (state updates).
-  //    * Compare to the test above .
-  //    */
-  //   expect(loadingText).not.toBeInTheDocument();
-  //   waitFor(() => expect(loadingText).toBeInTheDocument());
-  // });
+    /**
+     * One can argue that this AAA-format sometimes makes it harder
+     * to understand what is happening behind the scenes (state updates).
+     * Compare to the test above .
+     */
+    expect(loadingText).not.toBeInTheDocument();
+    await screen.findByText("Searching...");
+    await screen.findByText("No search results for username");
+  });
 });

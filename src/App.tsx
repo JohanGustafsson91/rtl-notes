@@ -1,26 +1,76 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import { fetchUser } from "./apiRequest";
+import "./App.css";
 
-function App() {
+const App = () => {
+  const [query, setQuery] = useState("");
+  const [searchState, setSearchState] = useState<SearchState>("WAITING");
+  const [searchResult, setSearchResult] = useState<Array<User>>([]);
+
+  console.log(`App render
+  [query] = ${query}
+  [searchState] = ${searchState}
+  [searchResult] = ${searchResult}
+  `);
+
+  useEffect(() => {
+    const clearSearchResult = query === "" && searchState !== "WAITING";
+    if (clearSearchResult) {
+      setSearchState("WAITING");
+    }
+  }, [query, searchState]);
+
+  const handleSearch = async () => {
+    setSearchState("SEARCHING");
+    setSearchResult([]);
+
+    try {
+      const users = await fetchUser(query);
+      setSearchResult(users);
+      setSearchState("SUCCESS");
+    } catch {
+      setSearchState("ERROR");
+    }
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <h1>Search a user</h1>
+      <input onChange={(e) => setQuery(e.target.value)} value={query} />
+      <button disabled={!query} onClick={handleSearch}>
+        Search
+      </button>
+
+      {searchState === "SEARCHING" && <p>Söker...</p>}
+
+      {searchState === "ERROR" && (
+        <p style={{ color: "red" }}>Någonting gick fel</p>
+      )}
+
+      {searchState === "SUCCESS" && searchResult.length > 0 && (
+        <div>
+          <h3>Sökresultat för {query}</h3>
+          {searchResult.map((item) => (
+            <p key={item.id}>{item.username}</p>
+          ))}
+        </div>
+      )}
+
+      {searchState === "SUCCESS" && searchResult.length === 0 && (
+        <div>
+          <h3>Inga sökresultat för {query}</h3>
+        </div>
+      )}
     </div>
   );
-}
+};
 
+App.displayName = "App";
 export default App;
+
+type SearchState = "WAITING" | "SEARCHING" | "ERROR" | "SUCCESS";
+
+interface User {
+  username: string;
+  id: string;
+}

@@ -7,11 +7,11 @@ const App = () => {
   const [searchState, setSearchState] = useState<SearchState>("WAITING");
   const [searchResult, setSearchResult] = useState<Array<User>>([]);
 
-  console.log(`App render
-  [query] = ${query}
-  [searchState] = ${searchState}
-  [searchResult] = ${searchResult}
-  `);
+  // console.log(`App render
+  // [query] = ${query}
+  // [searchState] = ${searchState}
+  // [searchResult] = ${searchResult}
+  // `);
 
   useEffect(() => {
     const clearSearchResult = query === "" && searchState !== "WAITING";
@@ -28,7 +28,8 @@ const App = () => {
       const users = await fetchUser(query);
       setSearchResult(users);
       setSearchState("SUCCESS");
-    } catch {
+    } catch (_) {
+      console.log(_);
       setSearchState("ERROR");
     }
   };
@@ -36,20 +37,24 @@ const App = () => {
   return (
     <div className="App">
       <h1>Search a user</h1>
-      <input onChange={(e) => setQuery(e.target.value)} value={query} />
+      <input
+        placeholder="Enter username"
+        onChange={(e) => setQuery(e.target.value)}
+        value={query}
+      />
       <button disabled={!query} onClick={handleSearch}>
         Search
       </button>
 
-      {searchState === "SEARCHING" && <p>Söker...</p>}
+      {searchState === "SEARCHING" && <p>Searching...</p>}
 
       {searchState === "ERROR" && (
-        <p style={{ color: "red" }}>Någonting gick fel</p>
+        <p style={{ color: "red" }}>Something went wrong</p>
       )}
 
       {searchState === "SUCCESS" && searchResult.length > 0 && (
         <div>
-          <h3>Sökresultat för {query}</h3>
+          <h3>Search results for {query}</h3>
           {searchResult.map((item) => (
             <p key={item.id}>{item.username}</p>
           ))}
@@ -58,7 +63,7 @@ const App = () => {
 
       {searchState === "SUCCESS" && searchResult.length === 0 && (
         <div>
-          <h3>Inga sökresultat för {query}</h3>
+          <h3>No search results for {query}</h3>
         </div>
       )}
     </div>

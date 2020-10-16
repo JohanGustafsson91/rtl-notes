@@ -1,6 +1,7 @@
 export const fetchUser = (query: string): Promise<Array<User>> =>
   new Promise((resolve, reject) =>
     setTimeout(() => {
+      console.log("timee");
       if (query.toLowerCase() === "unknown") {
         return resolve([]);
       }

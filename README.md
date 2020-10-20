@@ -6,8 +6,7 @@ Vi har en söksida där vi kan söka efter användare. Vi har mockat ett API och
 - Unknown => för att inte får något sökresultat
 - Allt annat => Vi får sökresultat
 
-Appen kan förbättras med exempelvis useReducer för att få ner
-antalet uppdateringar/renderingar av statet osv, men vi kör KISS!
+Appen kan förbättras med exempelvis useReducer för att få ner antalet uppdateringar/renderingar av statet osv, men vi kör KISS!
 
 ```tsx
 const App = () => {
@@ -150,12 +149,9 @@ it("First try with act", async () => {
 
 ## Andra testet med waitFor
 
-Första testet fungerar! Men vi ska se varningen om act som ett fel eftersom
-vi använder React Testing Library. RTL är det testverktyg som React rekommenderar
-att använda. När vi behöver vänta på att element ska dyka upp eller försvinna,
-finns det synkrona hjälpfunktioner som vi kan använda.
+Första testet fungerar! Men vi ska se varningen om act som ett fel eftersom vi använder React Testing Library. RTL är det testverktyg som React rekommenderar att använda. När vi behöver vänta på att element ska dyka upp eller försvinna i DOMen, asynkron kod köras klart eller något annat som inte är tillgängligt direkt så har RTL asynkrona hjälpfunktioner för det.
 
-De funktionerna använder act så det är ingenting som vi ska behöva använda.
+De funktionerna använder i sig act så det är ingenting som vi ska behöva använda.
 
 Vi kan istället använda "waitFor" från RTL till att vänta på våra renderingar!
 
@@ -174,7 +170,7 @@ it("Second try with waitFor", async () => {
 
   /**
    * waitFor tillåter oss att vänta på att ett visst värde är tillfredsställt innan
-   * vi går vidare. Funktionen väntar tills värdet har hittats eller tills att en timeout
+   * vi går vidare. Funktionen väntar tills värdet har "hittats" eller tills en timeout
    * (1000ms default) går ut.
    *
    * Funktionen returnerar ett promise så vi måste alltid använda await eller
@@ -190,19 +186,13 @@ it("Second try with waitFor", async () => {
 
 ## Tredje testet med ett påstående/en expect i waitFor
 
-Andra testet är en förbättring. Vi utnyttjar React Testing Libraries asynkrona
-funktioner istället för att använda act till att hantera stateuppdateringar och
-asynkron kod.
+Andra testet är en förbättring. Vi utnyttjar React Testing Libraries asynkrona funktioner till att hantera stateuppdateringar och asynkron kod istället för att använda act.
 
 Men vi kan göra det ännu bättre!
 
-Säg att att requestet till backend skulle ha skickats två gånger. Då skulle
-vårt test gå sönder (vilket vi vill). Dock innebär det nu att vi behöver vänta
-tills timeouten tar slut (1000ms) innan testet falerar.
+Säg att att requestet till backend skulle ha skickats två gånger. Då skulle vårt test gå sönder (vilket vi vill). Dock innebär det nu att vi behöver vänta tills timeouten tar slut (1000ms) innan testet falerar.
 
-Om vi istället bara gör ett påstående inuti waitFor kan vi vänta på att
-gränssnittet renderas till det state som vi förväntar oss och också
-falera snabbare om ett av påståendena inte blir lyckat.
+Om vi istället bara gör ett påstående inuti waitFor kan vi vänta på att gränssnittet renderas till det state som vi förväntar oss och också falera snabbare om ett av påståendena inte blir lyckat.
 
 ```typescript
 it("Third try with single assertion in waitFor", async () => {
@@ -230,11 +220,9 @@ it("Third try with single assertion in waitFor", async () => {
 
 Testet ovanför känns bra! Det finns en sak till som vi ska göra.
 
-Selectorn find* är en kombination av waitFor och getBy*.
-Den är enklare att skriva och felmeddelandet som vi får är bättre.
+Selectorn find* är en kombination av waitFor och getBy*. Den är enklare att skriva och felmeddelandet som vi får är bättre.
 
-Vi ska alltid använda find\* när vi vill fråga efter någonting som
-kanske inte är tillgängligt direkt.
+Vi ska alltid använda find\* när vi vill fråga efter någonting som kanske inte är tillgängligt direkt.
 
 ```typescript
 it("Fourth try with findBy", async () => {
@@ -256,11 +244,8 @@ it("Fourth try with findBy", async () => {
 
 ### Samma test uppdelat i AAA block
 
-Ibland tycker jag att det blir svårare att hänga med på vad som
-händer med stateuppdateringar när det ligger i det här formatet.
-I vissa fall tycker jag att det är enklare att läsa uppifrån och
-ned i testet och då lägga expect().not.toBeInTheDocument() innan
-vi gör vår sökning.
+Ibland tycker jag att det blir svårare att hänga med på vad som händer med stateuppdateringar när det ligger i det här formatet.
+I vissa fall tycker jag att det är enklare att läsa uppifrån och ned i testet och då lägga expect().not.toBeInTheDocument() innan vi gör vår sökning.
 
 ```typescript
 it("AAA: Fourth try with findBy", async () => {

@@ -12,16 +12,16 @@ import "./App.css";
  * state updates, but we keep it simple now.
  */
 
+// console.log(`App render
+// [query] = ${query}
+// [searchState] = ${searchState}
+// [searchResult] = ${searchResult}
+// `);
+
 const App = () => {
   const [query, setQuery] = useState("");
   const [searchState, setSearchState] = useState<SearchState>("WAITING");
   const [searchResult, setSearchResult] = useState<Array<User>>([]);
-
-  // console.log(`App render
-  // [query] = ${query}
-  // [searchState] = ${searchState}
-  // [searchResult] = ${searchResult}
-  // `);
 
   useEffect(() => {
     const clearSearchResult = query === "" && searchState !== "WAITING";
@@ -58,10 +58,6 @@ const App = () => {
 
       {searchState === "SEARCHING" && <p>Searching...</p>}
 
-      {searchState === "ERROR" && (
-        <p style={{ color: "red" }}>Something went wrong</p>
-      )}
-
       {searchState === "SUCCESS" && searchResult.length > 0 && (
         <div>
           <h3>Search results for {query}</h3>
@@ -75,6 +71,10 @@ const App = () => {
         <div>
           <h3>No search results for {query}</h3>
         </div>
+      )}
+
+      {searchState === "ERROR" && (
+        <p style={{ color: "red" }}>Something went wrong</p>
       )}
     </div>
   );

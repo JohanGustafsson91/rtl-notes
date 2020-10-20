@@ -1,5 +1,80 @@
 # Demo of React testing library
 
+Vi har en söksida där vi kan söka efter användare. Vi har mockat ett API och vi får söka på:
+
+- Error => för att kasta ett fel
+- Unknown => för att inte får något sökresultat
+- Allt annat => Vi får sökresultat
+
+Appen kan förbättras med exempelvis useReducer för att få ner
+antalet uppdateringar/renderingar av statet osv, men vi kör KISS!
+
+```tsx
+const App = () => {
+  const [query, setQuery] = useState("");
+  const [searchState, setSearchState] = useState<SearchState>("WAITING");
+  const [searchResult, setSearchResult] = useState<Array<User>>([]);
+
+  useEffect(() => {
+    const clearSearchResult = query === "" && searchState !== "WAITING";
+
+    if (clearSearchResult) {
+      setSearchState("WAITING");
+    }
+  }, [query, searchState]);
+
+  const handleSearch = async () => {
+    setSearchState("SEARCHING");
+    setSearchResult([]);
+
+    try {
+      const users = await fetchUser(query);
+      setSearchResult(users);
+      setSearchState("SUCCESS");
+    } catch (_) {
+      setSearchState("ERROR");
+    }
+  };
+
+  return (
+    <div className="App">
+      <h1>Search a user</h1>
+      <input
+        placeholder="Enter username"
+        onChange={(e) => setQuery(e.target.value)}
+        value={query}
+      />
+      <button disabled={!query} onClick={handleSearch}>
+        Search
+      </button>
+
+      {searchState === "SEARCHING" && <p>Searching...</p>}
+
+      {searchState === "SUCCESS" && searchResult.length > 0 && (
+        <div>
+          <h3>Search results for {query}</h3>
+          {searchResult.map((item) => (
+            <p key={item.id}>{item.username}</p>
+          ))}
+        </div>
+      )}
+
+      {searchState === "SUCCESS" && searchResult.length === 0 && (
+        <div>
+          <h3>No search results for {query}</h3>
+        </div>
+      )}
+
+      {searchState === "ERROR" && (
+        <p style={{ color: "red" }}>Something went wrong</p>
+      )}
+    </div>
+  );
+};
+```
+
+#
+
 Det här är det vi vill testa:
 
 - Användaren anger en söksträng
@@ -7,7 +82,7 @@ Det här är det vi vill testa:
 - Användaren ser en text om att en sökning pågår
 - Vid lyckad sökning visas sökresultaten från användaren.
 
----
+#
 
 Vi börjar med att sätta upp mockar för vårt API-request.
 

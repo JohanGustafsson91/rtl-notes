@@ -161,7 +161,7 @@ De funktionerna använder i sig act så det är ingenting som vi ska behöva anv
 
 Vi kan istället använda "waitFor" från RTL till att vänta på våra renderingar!
 
-\* Det finns några "speciella tillfällen" där man eventuellt kan behöva använda act ändå. Det finns att läsa om här https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning .
+\* _Det finns några "speciella tillfällen" där man eventuellt kan behöva använda act ändå. Det finns att läsa om här https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning ._
 
 ```typescript
 it("Second try with waitFor", async () => {

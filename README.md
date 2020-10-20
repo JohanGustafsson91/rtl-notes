@@ -1,44 +1,206 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Demo of React testing library
 
-## Available Scripts
+Det här är det vi vill testa:
 
-In the project directory, you can run:
+- Användaren anger en söksträng
+- Användaren klickar på sökknappen
+- Användaren ser en text om att en sökning pågår
+- Vid lyckad sökning visas sökresultaten från användaren.
 
-### `yarn start`
+---
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Vi börjar med att sätta upp mockar för vårt API-request.
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+```typescript
+jest.mock("./apiRequest");
+const apiMock = api as jest.Mocked<typeof api>;
 
-### `yarn test`
+beforeEach(() => {
+  apiMock.fetchUser.mockReset();
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+  apiMock.fetchUser.mockImplementationOnce((query) =>
+    Promise.resolve([{ username: `${query} Testsson`, id: "1" }])
+  );
+});
+```
 
-### `yarn build`
+## Första testet med act
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```typescript
+it("First try with act", async () => {
+  render(<App />);
+  const inputElement = screen.getByPlaceholderText("Enter username");
+  const searchButton = screen.getByText("Search");
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+  /**
+   * Selectorn queryBy* returnerar det första matchande elementet
+   * eller null om inget element hittades. Det är användbart när
+   * vi vill testa att ett element inte finns i DOMen
+   */
+  expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+  void userEvent.type(inputElement, "Testuser");
+  void userEvent.click(searchButton);
 
-### `yarn eject`
+  /**
+   * Det nedan fungerar, men vi får varningar i terminalen:
+   * Warning: An update to App inside a test was not wrapped in act(...).
+   */
+  // expect(screen.getByText("Searching...")).toBeInTheDocument();
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+  /**
+   * Vi wrappar vår kod med act, men vi får fortfarande varningen...
+   */
+  // act(() => {
+  //   expect(screen.getByText("Searching...")).toBeInTheDocument();
+  // });
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+  /**
+   * Vi får varningen eftersom testet körs klart innan det asynkrona
+   * request till backenden hinner göra det. Vi behöver wrappa vår kod
+   * med async act.
+   */
+  await act(async () =>
+    expect(screen.getByText("Searching...")).toBeInTheDocument()
+  );
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+  /**
+   * Async act tillåter oss att vänta på att promises ska resolvas
+   * och statet uppdateras. Nu kan vi förvänta oss korrekt resultat!
+   */
+  expect(screen.getByText("Search results for Testuser")).toBeInTheDocument();
+  expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+});
+```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Andra testet med waitFor
 
-## Learn More
+Första testet fungerar! Men vi ska se varningen om act som ett fel eftersom
+vi använder React Testing Library. RTL är det testverktyg som React rekommenderar
+att använda. När vi behöver vänta på att element ska dyka upp eller försvinna,
+finns det synkrona hjälpfunktioner som vi kan använda.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+De funktionerna använder act så det är ingenting som vi ska behöva använda.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Vi kan istället använda "waitFor" från RTL till att vänta på våra renderingar!
+
+```typescript
+it("Second try with waitFor", async () => {
+  render(<App />);
+  const inputElement = screen.getByPlaceholderText("Enter username");
+  const searchButton = screen.getByText("Search");
+
+  expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
+
+  void userEvent.type(inputElement, "Testuser");
+  void userEvent.click(searchButton);
+
+  expect(screen.getByText("Searching...")).toBeInTheDocument();
+
+  /**
+   * waitFor tillåter oss att vänta på att ett visst värde är tillfredsställt innan
+   * vi går vidare. Funktionen väntar tills värdet har hittats eller tills att en timeout
+   * (1000ms default) går ut.
+   *
+   * Funktionen returnerar ett promise så vi måste alltid använda await eller
+   * .then(done) när vi använder funktionen.
+   */
+  await waitFor(() => {
+    expect(screen.getByText("Search results for Testuser")).toBeInTheDocument();
+    expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+    expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+## Tredje testet med ett påstående/en expect i waitFor
+
+Andra testet är en förbättring. Vi utnyttjar React Testing Libraries asynkrona
+funktioner istället för att använda act till att hantera stateuppdateringar och
+asynkron kod.
+
+Men vi kan göra det ännu bättre!
+
+Säg att att requestet till backend skulle ha skickats två gånger. Då skulle
+vårt test gå sönder (vilket vi vill). Dock innebär det nu att vi behöver vänta
+tills timeouten tar slut (1000ms) innan testet falerar.
+
+Om vi istället bara gör ett påstående inuti waitFor kan vi vänta på att
+gränssnittet renderas till det state som vi förväntar oss och också
+falera snabbare om ett av påståendena inte blir lyckat.
+
+```typescript
+it("Third try with single assertion in waitFor", async () => {
+  render(<App />);
+  const inputElement = screen.getByPlaceholderText("Enter username");
+  const searchButton = screen.getByText("Search");
+
+  expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
+
+  void userEvent.type(inputElement, "Testuser");
+  void userEvent.click(searchButton);
+
+  expect(screen.getByText("Searching...")).toBeInTheDocument();
+
+  await waitFor(() =>
+    expect(screen.getByText("Search results for Testuser")).toBeInTheDocument()
+  );
+
+  expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+  expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);
+});
+```
+
+## Fjärde testet med findBy\*
+
+Testet ovanför känns bra! Det finns en sak till som vi ska göra.
+
+Selectorn find* är en kombination av waitFor och getBy*.
+Den är enklare att skriva och felmeddelandet som vi får är bättre.
+
+Vi ska alltid använda find\* när vi vill fråga efter någonting som
+kanske inte är tillgängligt direkt.
+
+```typescript
+it("Fourth try with findBy", async () => {
+  render(<App />);
+  const inputElement = screen.getByPlaceholderText("Enter username");
+  const searchButton = screen.getByText("Search");
+
+  expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
+
+  void userEvent.type(inputElement, "Testuser");
+  void userEvent.click(searchButton);
+
+  expect(screen.getByText("Searching...")).toBeInTheDocument();
+  await screen.findByText("Search results for Testuser");
+  expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+  expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);
+});
+```
+
+### Samma test uppdelat i AAA block
+
+Ibland tycker jag att det blir svårare att hänga med på vad som
+händer med stateuppdateringar när det ligger i det här formatet.
+I vissa fall tycker jag att det är enklare att läsa uppifrån och
+ned i testet och då lägga expect().not.toBeInTheDocument() innan
+vi gör vår sökning.
+
+```typescript
+it("AAA: Fourth try with findBy", async () => {
+  render(<App />);
+  const inputElement = screen.getByPlaceholderText("Enter username");
+  const searchButton = screen.getByText("Search");
+  const searchMessage = screen.queryByText("Searching...");
+
+  void userEvent.type(inputElement, "Testuser");
+  void userEvent.click(searchButton);
+
+  expect(searchMessage).not.toBeInTheDocument();
+  expect(screen.getByText("Searching...")).toBeInTheDocument();
+  await screen.findByText("Search results for Testuser");
+  expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+  expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);
+});
+```

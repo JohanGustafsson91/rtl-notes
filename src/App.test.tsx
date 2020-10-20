@@ -3,138 +3,196 @@ import { findByText, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as api from "./apiRequest";
 import App from "./App";
-// import { act } from "react-dom/test-utils";
+import { act } from "react-dom/test-utils";
 
 jest.mock("./apiRequest");
 const apiMock = api as jest.Mocked<typeof api>;
 
 describe("App", () => {
-  it("should render UI", () => {
-    render(<App />);
-    const pageTitle = screen.getByText("Search a user");
-    const inputElement = screen.getByPlaceholderText("Enter username");
-    const searchButton = screen.getByText("Search");
+  /**
+   * This is what we want to test:
+   * - User enters a search query
+   * - User clicks on search button
+   * - User sees a loading text when searching
+   * - API is called for users
+   * - User sees the search result with users
+   */
 
-    expect(pageTitle).toBeInTheDocument();
-    expect(inputElement).toBeDefined(); // Works as well.
-    expect(searchButton).toBeInTheDocument();
-  });
-
-  it.only("should fetch users", async () => {
-    apiMock.fetchUser.mockResolvedValueOnce([]);
-
-    const { debug } = render(<App />);
-    const inputElement = screen.getByPlaceholderText("Enter username");
-    const searchButton = screen.getByText("Search");
-
-    /**
-     * Selector queryBy* return the first matching node for a query
-     * and return null if no elements match.
-     * This is useful for asserting an element that is not present.
-     */
-    expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
-
-    void userEvent.type(inputElement, "username");
-    void userEvent.click(searchButton);
-
-    /**
-     * This wont work. We need to wait for the element to appear
-     * after a state update (see below).
-     */
-    // expect(loadingText).toBeInTheDocument();
-
-    /**
-     * This would work, but we get warnings in the console:
-     * Warning: An update to App inside a test was not wrapped in act(...).
-     *
-     * This is because the test completes before the async request does.
-     * We need to wrap our code in an async act:
-     *
-     * await act(async () => {
-     *  expect(screen.queryByText("Searching...")).toBeInTheDocument();
-     * });
-     *
-     * But we should see this warning as an error because we are using Testing Library.
-     * If you use one of React Testing Library's async utilities (which wrap act)
-     * to wait for the component to re-render then you'll be fine. (See below)
-     */
-    // expect(screen.queryByText("Searching...")).toBeInTheDocument();
-
-    /**
-     * We need to wait for the element to appear in the DOM.
-     * It appears after a state update.
-     *
-     * We can use waitFor and it wraps act so we dont need to do that.
-     */
-    waitFor(() => {
-      // debug();
-      // console.log("waitFor callback");
-
-      expect(screen.queryByText("Searching...")).toBeInTheDocument();
-
-      /**
-       * This will work as well.
-       * waitFor is intended for things that have a non-deterministic
-       * amount of time between the action you performed and the assertion passing.
-       * Because of this, the callback can be called (or checked for errors)
-       * a non-deterministic number of times and frequency
-       * (it's called both on an interval as well as when there are DOM mutations).
-       *
-       * So this means that your side-effect could run multiple times!
-       * First time DOM mutaion => getByText('Searching...) equals true.
-       * Second time DOM mutation => getByText('No search results for username') equals true.
-       */
-      expect(screen.getByText("Searching...")).toBeInTheDocument();
-      expect(
-        screen.getByText("No search results for username")
-      ).toBeInTheDocument();
+  describe("Should show fetched users from search", () => {
+    beforeEach(() => {
+      apiMock.fetchUser.mockReset();
+      apiMock.fetchUser.mockImplementationOnce((query) =>
+        Promise.resolve([{ username: `${query} Testsson`, id: "1" }])
+      );
     });
 
-    /**
-     * If you return a promise in the waitFor callback (either explicitly or
-     * implicitly with async syntax), then the waitFor utility will not call
-     * your callback again until that promise rejects. This allows you to waitFor
-     * things that must be checked asynchronously.
-     *
-     * We wait until the callback does not throw an error. In this case, that means
-     * it'll wait until the mock function has been called once.
-     */
-    await waitFor(() => {
+    it("First try with act", async () => {
+      render(<App />);
+      const inputElement = screen.getByPlaceholderText("Enter username");
+      const searchButton = screen.getByText("Search");
+
       /**
-       * Therefore this will fail because the state is updated
-       * before the async api call is called
+       * Selector queryBy* returns the first matching node for a query
+       * and null if no elements match. This is useful for asserting an
+       * element that is not present.
+       */
+      expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
+
+      void userEvent.type(inputElement, "Testuser");
+      void userEvent.click(searchButton);
+
+      /**
+       * This works, but we get warnings in the console:
+       * Warning: An update to App inside a test was not wrapped in act(...).
        */
       // expect(screen.getByText("Searching...")).toBeInTheDocument();
+
+      /**
+       * We wrap our code with act, but we still get the warning
+       */
+      // act(() => {
+      //   expect(screen.getByText("Searching...")).toBeInTheDocument();
+      // });
+
+      /**
+       * This is because the test completes before the async request to
+       * our backend does. We need to wrap our code in an async act.
+       */
+      await act(async () =>
+        expect(screen.getByText("Searching...")).toBeInTheDocument()
+      );
+
+      /**
+       * The async act allows us to wait on promises to resolve and state
+       * updates to complete. We can now expect the result.
+       */
       expect(
-        screen.getByText("No search results for username")
+        screen.getByText("Search results for Testuser")
       ).toBeInTheDocument();
+      expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
     });
 
-    // // Or we could use a find instead of above
-    // All the async utils are built on top of waitFor.
-    // Those two bits of code are basically equivalent (find* queries use waitFor under the hood), but the second is simpler and the error message you get will be better.
-    // Advice: use find* any time you want to query for something that may not be available right away.
-    // https://kentcdodds.com/blog/common-mistakes-with-react-testing-library#using-waitfor-to-wait-for-elements-that-can-be-queried-with-find
-    // await screen.findByText("Searching...");
-  });
+    /**
+     * The test above works. But we should treat this act warning as an
+     * error. The reason for that is because we use the (recommended by React)
+     * Testing Library in our unit tests. The async utilities in React Testing Library
+     * wraps act, meaning there is no need to use act in our tests.
+     *
+     * Use one of React Testing Library's async utilities to wait for the component
+     * to re-render then you'll be fine.
+     *
+     * Lets try the same test with the async util "waitFor" instead!
+     */
 
-  it.only("AAA format: should show message for no search results", async () => {
-    apiMock.fetchUser.mockResolvedValueOnce([]);
-    render(<App />);
-    const inputElement = screen.getByPlaceholderText("Enter username");
-    const searchButton = screen.getByText("Search");
-    const loadingText = screen.queryByText("Searching...");
+    it("Second try with waitFor", async () => {
+      render(<App />);
+      const inputElement = screen.getByPlaceholderText("Enter username");
+      const searchButton = screen.getByText("Search");
 
-    void userEvent.type(inputElement, "username");
-    void userEvent.click(searchButton);
+      expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
+
+      void userEvent.type(inputElement, "Testuser");
+      void userEvent.click(searchButton);
+
+      expect(screen.getByText("Searching...")).toBeInTheDocument();
+
+      /**
+       * If you need to wait for an element to appear, the async wait utilities allow
+       * you to wait for an assertion to be satisfied before proceeding.
+       * The wait utilities retry until the query passes or times out (1000ms). The async
+       * methods return a Promise, so you must always use await or .then(done) when calling them.
+       *
+       * We wait until the callback does not throw an error. In this case, that means
+       * it'll wait until the mock function has been called once.
+       */
+      await waitFor(() => {
+        expect(
+          screen.getByText("Search results for Testuser")
+        ).toBeInTheDocument();
+        expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+        expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);
+      });
+    });
 
     /**
-     * One can argue that this AAA-format sometimes makes it harder
-     * to understand what is happening behind the scenes (state updates).
-     * Compare to the test above .
+     * The above test is an improvement. We utilize the React Testing Libraries
+     * async utilities instead of using act to handle state updates and async code.
+     *
+     * But we can do better!
+     *
+     * Let's say the fetchMock.fetchUser was called twice and the test fails.
+     * Then we'll have to wait for the waitFor timeout (default is 1000ms) before
+     * we see that test failure. By putting a single assertion in there, we can
+     * both wait for the UI to settle to the state we want to assert on,
+     * and also fail faster if one of the assertions do end up failing.
      */
-    expect(loadingText).not.toBeInTheDocument();
-    await screen.findByText("Searching...");
-    await screen.findByText("No search results for username");
+    it("Third try with single assertion in waitFor", async () => {
+      render(<App />);
+      const inputElement = screen.getByPlaceholderText("Enter username");
+      const searchButton = screen.getByText("Search");
+
+      expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
+
+      void userEvent.type(inputElement, "Testuser");
+      void userEvent.click(searchButton);
+
+      expect(screen.getByText("Searching...")).toBeInTheDocument();
+
+      await waitFor(() =>
+        expect(
+          screen.getByText("Search results for Testuser")
+        ).toBeInTheDocument()
+      );
+
+      expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+      expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);
+    });
+
+    /**
+     * This feels good. But we can utilize React Testing Library more
+     * and do even better!
+     *
+     * The selector find* uses waitFor under the hood (combination of getBy* and waitFor),
+     * is simpler and the error message you get will be better. Use find* any time you want to
+     * query for something that may not be available right away.
+     */
+
+    it("Fourth try with findBy", async () => {
+      render(<App />);
+      const inputElement = screen.getByPlaceholderText("Enter username");
+      const searchButton = screen.getByText("Search");
+
+      expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
+
+      void userEvent.type(inputElement, "Testuser");
+      void userEvent.click(searchButton);
+
+      expect(screen.getByText("Searching...")).toBeInTheDocument();
+      await screen.findByText("Search results for Testuser");
+      expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+      expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);
+    });
+
+    it("AAA: Fourth try with findBy", async () => {
+      render(<App />);
+      const inputElement = screen.getByPlaceholderText("Enter username");
+      const searchButton = screen.getByText("Search");
+      const searchMessage = screen.queryByText("Searching...");
+
+      void userEvent.type(inputElement, "Testuser");
+      void userEvent.click(searchButton);
+
+      /**
+       * One can argue that this AAA-format sometimes makes it harder
+       * to understand what is happening behind the scenes (state updates).
+       * We need to select searchMessage in the Arrange and then Assert
+       * on it after the Act block.
+       */
+      expect(searchMessage).not.toBeInTheDocument();
+      expect(screen.getByText("Searching...")).toBeInTheDocument();
+      await screen.findByText("Search results for Testuser");
+      expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+      expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);
+    });
   });
 });

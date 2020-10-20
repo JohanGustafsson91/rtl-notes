@@ -2,6 +2,16 @@ import React, { useEffect, useState } from "react";
 import { fetchUser } from "./apiRequest";
 import "./App.css";
 
+/**
+ * This is a search example with a mocked backend.
+ *
+ * We will test this logic in different ways and try to
+ * explain RTL selectors.
+ *
+ * The state below could utilize useReducer to avoid some
+ * state updates, but we keep it simple now.
+ */
+
 const App = () => {
   const [query, setQuery] = useState("");
   const [searchState, setSearchState] = useState<SearchState>("WAITING");
@@ -15,6 +25,7 @@ const App = () => {
 
   useEffect(() => {
     const clearSearchResult = query === "" && searchState !== "WAITING";
+
     if (clearSearchResult) {
       setSearchState("WAITING");
     }
@@ -29,7 +40,6 @@ const App = () => {
       setSearchResult(users);
       setSearchState("SUCCESS");
     } catch (_) {
-      console.log(_);
       setSearchState("ERROR");
     }
   };
@@ -70,7 +80,6 @@ const App = () => {
   );
 };
 
-App.displayName = "App";
 export default App;
 
 type SearchState = "WAITING" | "SEARCHING" | "ERROR" | "SUCCESS";

@@ -1,10 +1,10 @@
 # Demo of React testing library
 
-Vi har en söksida där vi kan söka efter användare. Vi har mockat ett API och vi får söka på:
+Vi har en söksida där vi kan söka efter användare. Vi har ett mockat API och söker vi på:
 
-- Error => för att kasta ett fel
-- Unknown => för att inte får något sökresultat
-- Allt annat => Vi får sökresultat
+- Error => får vi ett fel kastat
+- Unknown => får vi ett tomtsökresultat
+- Allt annat => får vi sökresultat
 
 Appen kan förbättras med exempelvis useReducer för att få ner antalet uppdateringar/renderingar av statet osv, men vi kör KISS!
 

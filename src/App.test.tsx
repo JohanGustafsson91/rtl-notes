@@ -63,6 +63,14 @@ describe("App", () => {
       );
 
       /**
+       * The act warning from React is there to tell us that something
+       * happened to our component when we weren't expecting anything to happen.
+       * So you're supposed to wrap every interaction you make with your
+       * component in act to let React know that we expect our component
+       * to perform some updates and when you don't do that and there are updates,
+       * React will warn us that unexpected updates happened.
+       * This helps us avoid bugs like the one described above.
+       *
        * The async act allows us to wait on promises to resolve and state
        * updates to complete. We can now expect the result.
        */
@@ -77,6 +85,8 @@ describe("App", () => {
      * error. The reason for that is because we use the (recommended by React)
      * Testing Library in our unit tests. The async utilities in React Testing Library
      * wraps act, meaning there is no need to use act in our tests.
+     *
+     * https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning
      *
      * Use one of React Testing Library's async utilities to wait for the component
      * to re-render then you'll be fine.

@@ -130,6 +130,12 @@ it("First try with act", async () => {
   // });
 
   /**
+   * Act varningen är till för att berätta för oss att någonting
+   * hände i vår komponent där vi inte har förväntat oss att något
+   * ska hända. Så vi behöver wrappa våra interaktioner med komponenten
+   * i ett act-block för att säga till React att vi förväntar oss
+   * uppdateringar.
+   *
    * Vi får varningen eftersom testet körs klart innan det asynkrona
    * request till backenden hinner göra det. Vi behöver wrappa vår kod
    * med async act.
@@ -149,11 +155,13 @@ it("First try with act", async () => {
 
 ## Andra testet med waitFor
 
-Första testet fungerar! Men vi ska se varningen om act som ett fel eftersom vi använder React Testing Library. RTL är det testverktyg som React rekommenderar att använda. När vi behöver vänta på att element ska dyka upp eller försvinna i DOMen, asynkron kod köras klart eller något annat som inte är tillgängligt direkt så har RTL asynkrona hjälpfunktioner för det.
+Första testet fungerar! Men vi kan se varningen om act som ett fel\* eftersom vi använder React Testing Library. RTL är det testverktyg som React rekommenderar att använda. När vi behöver vänta på att element ska dyka upp eller försvinna i DOMen, asynkron kod köras klart eller något annat som inte är tillgängligt direkt så har RTL asynkrona hjälpfunktioner för det.
 
 De funktionerna använder i sig act så det är ingenting som vi ska behöva använda.
 
 Vi kan istället använda "waitFor" från RTL till att vänta på våra renderingar!
+
+\* Det finns några "speciella tillfällen" där man eventuellt kan behöva använda act ändå. Det finns att läsa om här https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning .
 
 ```typescript
 it("Second try with waitFor", async () => {

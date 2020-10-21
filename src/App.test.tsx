@@ -22,7 +22,7 @@ describe("App", () => {
       );
   });
 
-  it.skip("should call API", () => {
+  it("should call API", () => {
     render(<App />);
     const inputElement = screen.getByPlaceholderText("Enter username");
     const searchButton = screen.getByText("Search");

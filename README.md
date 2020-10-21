@@ -249,8 +249,6 @@ Den tillåter oss att vänta på att promises ska resolvas och statet uppdateras
 
 Vi slänger in den nedan, varningarna försvinner och allt är frid och fröj. Eller?
 
-Hade vi nu råkat ta bort vår "setSearchState" uppdatering när vi får svar från backend så hade testet fortfarande gått igenom.
-
 ```typescript
 it("should call API", async () => {
   render(<App />);
@@ -267,6 +265,8 @@ it("should call API", async () => {
   });
 });
 ```
+
+Hade vi nu råkat ta bort vår "setSearchState" uppdatering när vi får svar från backend så hade testet fortfarande gått igenom.
 
 För att göra testet bättre och mer robust bör vi förvänta oss att texten när sökanropet laddar ska ha försvunnit efter att svar från backend har kommit.
 

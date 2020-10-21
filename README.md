@@ -4,7 +4,7 @@
 2. Visa upp en sökapplikation som kommer vara grund för testerna vi går igenom.
 3. Köra samma test på olika sätt och förklara hur vi kan göra de bättre. Jag kommer ta med olika selectorer och förklara när de är bra att använda.
 
-#1. Act
+# 1. Act
 
 Vi har en komponent:
 
@@ -229,6 +229,7 @@ it("should call API", () => {
 ```
 
 Det här testet fungerar. Men vi varningar:
+
 Warning: An update to App inside a test was not wrapped in act(...).
 
 Vad beror det här på nu då? Vi kör ju RTL....

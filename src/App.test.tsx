@@ -40,7 +40,7 @@ describe("App act warnings explained", () => {
     expect(apiMock.fetchUser).toHaveBeenCalledWith("Testuser");
   });
 
-  it("should call API fix act warning", async () => {
+  it.only("should call API fix act warning", async () => {
     render(<App />);
     const inputElement = screen.getByPlaceholderText("Enter username");
     const searchButton = screen.getByText("Search");

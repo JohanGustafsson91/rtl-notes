@@ -228,9 +228,9 @@ it("should call API", () => {
 });
 ```
 
-Det här testet fungerar. Men vi varningar:
+Det här testet fungerar, men vi får varningar:
 
-Warning: An update to App inside a test was not wrapped in act(...).
+> Warning: An update to App inside a test was not wrapped in act(...).
 
 Vad beror det här på nu då? Vi kör ju RTL....
 
@@ -280,7 +280,7 @@ it("should call API", async () => {
 });
 ```
 
-Varningarna om `act` är borta och de hjälpte oss faktiskt till att hitta en eventuell bugg.
+Varningarna om `act` är borta och de hjälpte oss faktiskt till att hitta en eventuell bugg genom att skriva ett bättre test.
 
 När vi stöter på en sån varning är det nästan alltid någon kod som inte körts klart i vår komponent och som vi inte har förväntat något resultat på. React är schyssta och varnar oss om de oväntade förändringarna så att vi kan skriva bättre test!
 
@@ -303,7 +303,7 @@ it("should call API and show search result", async () => {
 });
 ```
 
-## Ett påstående/en expect i waitFor
+### Ett påstående/en expect i waitFor
 
 Vi utnyttjar React Testing Libraries asynkrona funktioner till att hantera stateuppdateringar och asynkron kod istället för att använda act.
 
@@ -331,13 +331,11 @@ it("should call API and show search result", async () => {
 });
 ```
 
-## Fjärde testet med findBy\*
+### Använd findBy\*
 
 Testet ovanför känns bra! Det finns en sak till som vi ska göra.
 
-Selectorn find* är en kombination av waitFor och getBy*. Den är enklare att skriva och felmeddelandet som vi får är bättre.
-
-Vi ska alltid använda find\* när vi vill fråga efter någonting som kanske inte är tillgängligt direkt.
+Selectorn find* är en kombination av waitFor och getBy*. Den är enklare att skriva och vi bör alltid använda find\* när vi vill fråga efter någonting som kanske inte är tillgängligt direkt.
 
 ```typescript
 it("should call API and show search result", async () => {

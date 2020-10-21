@@ -83,9 +83,9 @@ Händelser så som rendering, användarenhändelser eller hämtning av data kan 
 3. Appen renderas
 4. React kör vår sidoeffekt `useEffect` efter att DOMen har uppdaterats.
 
-`Act` säkerställer att alla uppdateringar relaterade till en händelse blir färdiga och finns i DOMen innan vi testar koden (dvs det som händer i webbläsaren). På det sättet så skriver vi tester som körs mer likt det som våra användare kommer uppleva när de användaren applikationen.
+`Act` säkerställer att alla uppdateringar relaterade till en händelse blir färdiga och finns i DOMen innan vi testar koden (dvs det som händer i webbläsaren). På det sättet skriver vi tester som körs mer likt det som våra användare kommer uppleva när de användaren applikationen.
 
-Men vi använder React Testing Library som rekommenderat av React. När vi behöver vänta på att element ska dyka upp eller försvinna i DOMen, asynkron kod köras klart eller något annat som inte är tillgängligt direkt så har React Testing Library asynkrona hjälpfunktioner för det.
+Men vi använder React Testing Library som rekommenderas av React att använda. När vi behöver vänta på att element ska dyka upp eller försvinna i DOMen, asynkron kod köras klart eller något annat som inte är tillgängligt direkt så har React Testing Library asynkrona hjälpfunktioner för det.
 
 De funktionerna använder i sig `act` så det är ingenting som vi manuellt ska behöva använda i våra tester. Förutom vid några speciella tillfällen. Jag kommer visa ett sådant exempel när jag visar sökapplikationen. Det finns att läsa om alla tillfällen för den intresserade:
 https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning#other-use-cases-for-manually-calling-act.

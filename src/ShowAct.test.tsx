@@ -36,7 +36,7 @@ describe("Counter", () => {
     container = null;
   });
 
-  it.only("can render and update a counter", () => {
+  it("can render and update a counter", () => {
     // Test first render and effect
     act(() => {
       ReactDOM.render(<Counter />, container);
@@ -67,7 +67,7 @@ describe("Counter", () => {
 
     void userEvent.click(button);
 
-    await waitFor(() => expect(label).toHaveTextContent("You clicked 1 times"));
-    expect(document.title).toBe("You clicked 1 times");
+    await waitFor(() => expect(document.title).toBe("You clicked 1 times"));
+    expect(label).toHaveTextContent("You clicked 1 times");
   });
 });

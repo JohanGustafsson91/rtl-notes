@@ -1,4 +1,113 @@
-# Demo of React testing library
+# Demo av tester
+
+1. Visa ett exempel där act används utan och med React Testing Library
+2. Visa upp en sökapplikation som kommer vara grund för testerna vi går igenom.
+3. Köra samma test på olika sätt och förklara hur vi kan göra de bättre. Jag kommer ta med olika selectorer och förklara när de är bra att använda.
+
+#1. Act
+
+Vi har en komponent:
+
+```typescript
+const Counter = () => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    document.title = `You clicked ${count} times`;
+  });
+
+  return (
+    <div>
+      <label>You clicked {count} times</label>
+      <button onClick={() => setCount(count + 1)}>Click me</button>
+    </div>
+  );
+};
+```
+
+Det som händer i Reacts lifecycle är följande:
+
+1. Appen renderas
+2. useEffect körs
+
+Om användaren trycker på knappen så:
+
+3. setState körs och appen renderas
+4. useEffect körs.
+
+Vi skriver ett test mha ReactDOM:
+
+```typescript
+let container: null | HTMLDivElement;
+
+beforeEach(() => {
+  container = document.createElement("div");
+  document.body.appendChild(container);
+});
+
+afterEach(() => {
+  document.body.removeChild(container as Node);
+  container = null;
+});
+
+it("can render and update a counter", () => {
+  // Test first render and effect
+  act(() => {
+    ReactDOM.render(<Counter />, container);
+  });
+  const button = container!.querySelector("button");
+  const label = container!.querySelector("label");
+
+  expect(label!.textContent).toBe("You clicked 0 times");
+  expect(document.title).toBe("You clicked 0 times");
+
+  // Test second render and effect
+  act(() => {
+    button!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+
+  expect(label!.textContent).toBe("You clicked 1 times");
+  expect(document.title).toBe("You clicked 1 times");
+});
+```
+
+Utan `act` så skulle testet ovan falera:
+
+- `document.title` skulle vara tom sträng efter första render eftersom `useEffect` inte har körts efter första renderingen.
+- `document.title` skulle vara "You clicked 0 times" efter första klicket på knappen.
+
+Händelser så som rendering, användarenhändelser eller hämtning av data kan ses som en enhet av interaktion i gränssnittet. `Act` säkerställer att alla uppdateringar relaterade till en händelse blir färdiga och finns i DOMen innan vi testar koden (dvs det som händer i webbläsaren). På det sättet så skriver vi tester som körs mer likt det som våra användare kommer uppleva när de användaren applikationen.
+
+Men vi använder React Testing Library som rekommenderat av React. När vi behöver vänta på att element ska dyka upp eller försvinna i DOMen, asynkron kod köras klart eller något annat som inte är tillgängligt direkt så har React Testing Library asynkrona hjälpfunktioner för det.
+
+De funktionerna använder i sig `act` så det är ingenting som vi manuellt ska behöva använda i våra tester. Förutom vid några speciella tillfällen. Jag kommer visa ett sådant exempel när jag visar sökapplikationen. Det finns att läsa om alla tillfällen för den intresserade:
+https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning#other-use-cases-for-manually-calling-act.
+
+Vi skriver om testet ovan med React Testing Library. Vi använder hjälpfunktionen waitFor\* .
+
+waitFor tillåter oss att vänta på att ett visst värde är tillfredsställt innan vi går vidare. Funktionen väntar tills värdet har "hittats" eller tills en timeout (1000ms default) går ut.
+
+Funktionen returnerar ett promise så vi måste alltid använda await eller .then(done) när vi använder funktionen.
+
+```typescript
+it("can render and update a counter", async () => {
+  render(<Counter />);
+  const button = screen.getByText("Click me");
+  const label = screen.getByText("You clicked 0 times");
+
+  expect(label).toBeInTheDocument();
+  expect(document.title).toBe("You clicked 0 times");
+
+  void userEvent.click(button);
+
+  await waitFor(() => expect(document.title).toBe("You clicked 1 times"));
+  expect(label).toHaveTextContent("You clicked 1 times");
+});
+```
+
+#
+
+# 2. Sökapplikation
 
 Vi har en söksida där vi kan söka efter användare. Vi har ett mockat API och söker vi på:
 
@@ -8,30 +117,28 @@ Vi har en söksida där vi kan söka efter användare. Vi har ett mockat API och
 
 Appen kan förbättras med exempelvis useReducer för att få ner antalet uppdateringar/renderingar av statet osv, men vi kör KISS!
 
-```tsx
+```typescript
 const App = () => {
   const [query, setQuery] = useState("");
-  const [searchState, setSearchState] = useState<SearchState>("WAITING");
+  const [searchState, setSearchState] = useState<SearchState>("IDLE");
   const [searchResult, setSearchResult] = useState<Array<User>>([]);
 
   useEffect(() => {
-    const clearSearchResult = query === "" && searchState !== "WAITING";
-
-    if (clearSearchResult) {
-      setSearchState("WAITING");
+    if (query === "" && searchState === "FULFILLED") {
+      setSearchState("IDLE");
     }
   }, [query, searchState]);
 
   const handleSearch = async () => {
-    setSearchState("SEARCHING");
+    setSearchState("PENDING");
     setSearchResult([]);
 
     try {
       const users = await fetchUser(query);
       setSearchResult(users);
-      setSearchState("SUCCESS");
+      setSearchState("FULFILLED");
     } catch (_) {
-      setSearchState("ERROR");
+      setSearchState("REJECTED");
     }
   };
 
@@ -47,9 +154,9 @@ const App = () => {
         Search
       </button>
 
-      {searchState === "SEARCHING" && <p>Searching...</p>}
+      {searchState === "PENDING" && <p>Searching...</p>}
 
-      {searchState === "SUCCESS" && searchResult.length > 0 && (
+      {searchState === "FULFILLED" && searchResult.length > 0 && (
         <div>
           <h3>Search results for {query}</h3>
           {searchResult.map((item) => (
@@ -58,13 +165,13 @@ const App = () => {
         </div>
       )}
 
-      {searchState === "SUCCESS" && searchResult.length === 0 && (
+      {searchState === "FULFILLED" && searchResult.length === 0 && (
         <div>
           <h3>No search results for {query}</h3>
         </div>
       )}
 
-      {searchState === "ERROR" && (
+      {searchState === "REJECTED" && (
         <p style={{ color: "red" }}>Something went wrong</p>
       )}
     </div>
@@ -98,10 +205,10 @@ beforeEach(() => {
 });
 ```
 
-## Första testet med act
+Vi skriver ett test:
 
 ```typescript
-it("First try with act", async () => {
+it("should call API", () => {
   render(<App />);
   const inputElement = screen.getByPlaceholderText("Enter username");
   const searchButton = screen.getByText("Search");
@@ -116,74 +223,77 @@ it("First try with act", async () => {
   void userEvent.type(inputElement, "Testuser");
   void userEvent.click(searchButton);
 
-  /**
-   * Det nedan fungerar, men vi får varningar i terminalen:
-   * Warning: An update to App inside a test was not wrapped in act(...).
-   */
-  // expect(screen.getByText("Searching...")).toBeInTheDocument();
-
-  /**
-   * Vi wrappar vår kod med act, men vi får fortfarande varningen...
-   */
-  // act(() => {
-  //   expect(screen.getByText("Searching...")).toBeInTheDocument();
-  // });
-
-  /**
-   * Act varningen är till för att berätta för oss att någonting
-   * hände i vår komponent där vi inte har förväntat oss att något
-   * ska hända. Så vi behöver wrappa våra interaktioner med komponenten
-   * i ett act-block för att säga till React att vi förväntar oss
-   * uppdateringar.
-   *
-   * Vi får varningen eftersom testet körs klart innan det asynkrona
-   * request till backenden hinner göra det. Vi behöver wrappa vår kod
-   * med async act.
-   */
-  await act(async () =>
-    expect(screen.getByText("Searching...")).toBeInTheDocument()
-  );
-
-  /**
-   * Async act tillåter oss att vänta på att promises ska resolvas
-   * och statet uppdateras. Nu kan vi förvänta oss korrekt resultat!
-   */
-  expect(screen.getByText("Search results for Testuser")).toBeInTheDocument();
-  expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
+  expect(screen.getByText("Searching...")).toBeInTheDocument();
+  expect(apiMock.fetchUser).toHaveBeenCalledWith("Testuser");
 });
 ```
 
-## Andra testet med waitFor
+Det här testet fungerar. Men vi varningar:
+Warning: An update to App inside a test was not wrapped in act(...).
 
-Första testet fungerar! Men vi kan se varningen om act som ett fel\* eftersom vi använder React Testing Library. RTL är det testverktyg som React rekommenderar att använda. När vi behöver vänta på att element ska dyka upp eller försvinna i DOMen, asynkron kod köras klart eller något annat som inte är tillgängligt direkt så har RTL asynkrona hjälpfunktioner för det.
+Vad beror det här på nu då? Vi kör ju RTL....
 
-De funktionerna använder i sig act så det är ingenting som vi ska behöva använda.
+Act varningen är inlagd av React till oss för att berätta att någonting hände i vår komponent som vi inte hade förväntat oss skulle hända. Exempel på det är asynkron kod som körs som ett resultat från ett promise eller en timeout. Vi får varningen eftersom testet körs klart innan det asynkrona request till backenden hinner göra det. React varnar oss om att det inte är säkert att interaktionen med komponenten testades korrekt (oväntad uppdatering).
 
-Vi kan istället använda "waitFor" från RTL till att vänta på våra renderingar!
+Vi tänker att det vi behöver göra är att vänta på att vårat promise har resolvats. Vi vet att vi inte ska behöva köra `act` från testet ovan, men vi upptäcker att det finns en asynkron act som vi kan använda.
 
-\* _Det finns några "speciella tillfällen" där man eventuellt kan behöva använda act ändå. Det finns att läsa om här https://kentcdodds.com/blog/fix-the-not-wrapped-in-act-warning ._
+Den tillåter oss att vänta på att promises ska resolvas och statet uppdateras.
+
+Vi slänger in den nedan, varningarna försvinner och allt är frid och fröj. Eller?
+
+Hade vi nu råkat ta bort vår "setSearchState" uppdatering när vi får svar från backend så hade testet fortfarande gått igenom.
 
 ```typescript
-it("Second try with waitFor", async () => {
+it("should call API", async () => {
   render(<App />);
   const inputElement = screen.getByPlaceholderText("Enter username");
   const searchButton = screen.getByText("Search");
-
-  expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
 
   void userEvent.type(inputElement, "Testuser");
   void userEvent.click(searchButton);
 
   expect(screen.getByText("Searching...")).toBeInTheDocument();
 
-  /**
-   * waitFor tillåter oss att vänta på att ett visst värde är tillfredsställt innan
-   * vi går vidare. Funktionen väntar tills värdet har "hittats" eller tills en timeout
-   * (1000ms default) går ut.
-   *
-   * Funktionen returnerar ett promise så vi måste alltid använda await eller
-   * .then(done) när vi använder funktionen.
-   */
+  await act(async () => {
+    expect(apiMock.fetchUser).toHaveBeenCalledWith("Testuser");
+  });
+});
+```
+
+För att göra testet bättre och mer robust bör vi förvänta oss att texten när sökanropet laddar ska ha försvunnit efter att svar från backend har kommit.
+
+React testing library har som sagt asynkrona hjälpfunktioner. En av de är waitFor\* som vi gått igenom ovan så vi använder den:
+
+```typescript
+it("should call API", async () => {
+  render(<App />);
+  const inputElement = screen.getByPlaceholderText("Enter username");
+  const searchButton = screen.getByText("Search");
+
+  void userEvent.type(inputElement, "Testuser");
+  void userEvent.click(searchButton);
+
+  expect(screen.getByText("Searching...")).toBeInTheDocument();
+  expect(apiMock.fetchUser).toHaveBeenCalledWith("Testuser");
+  await waitForElementToBeRemoved(() => screen.getByText("Searching..."));
+});
+```
+
+Varningarna om `act` är borta och de hjälpte oss faktiskt till att hitta en eventuell bugg.
+
+När vi stöter på en sån varning är det nästan alltid någon kod som inte körts klart i vår komponent och som vi inte har förväntat något resultat på. React är schyssta och varnar oss om de oväntade förändringarna så att vi kan skriva bättre test!
+
+Vi fortsätter att testa av vår sökapplikation:
+
+```typescript
+it("should call API and show search result", async () => {
+  render(<App />);
+  const inputElement = screen.getByPlaceholderText("Enter username");
+  const searchButton = screen.getByText("Search");
+
+  void userEvent.type(inputElement, "Testuser");
+  void userEvent.click(searchButton);
+
   await waitFor(() => {
     expect(screen.getByText("Search results for Testuser")).toBeInTheDocument();
     expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
@@ -192,9 +302,9 @@ it("Second try with waitFor", async () => {
 });
 ```
 
-## Tredje testet med ett påstående/en expect i waitFor
+## Ett påstående/en expect i waitFor
 
-Andra testet är en förbättring. Vi utnyttjar React Testing Libraries asynkrona funktioner till att hantera stateuppdateringar och asynkron kod istället för att använda act.
+Vi utnyttjar React Testing Libraries asynkrona funktioner till att hantera stateuppdateringar och asynkron kod istället för att använda act.
 
 Men vi kan göra det ännu bättre!
 
@@ -203,17 +313,13 @@ Säg att att requestet till backend skulle ha skickats två gånger. Då skulle 
 Om vi istället bara gör ett påstående inuti waitFor kan vi vänta på att gränssnittet renderas till det state som vi förväntar oss och också falera snabbare om ett av påståendena inte blir lyckat.
 
 ```typescript
-it("Third try with single assertion in waitFor", async () => {
+it("should call API and show search result", async () => {
   render(<App />);
   const inputElement = screen.getByPlaceholderText("Enter username");
   const searchButton = screen.getByText("Search");
 
-  expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
-
   void userEvent.type(inputElement, "Testuser");
   void userEvent.click(searchButton);
-
-  expect(screen.getByText("Searching...")).toBeInTheDocument();
 
   await waitFor(() =>
     expect(screen.getByText("Search results for Testuser")).toBeInTheDocument()
@@ -233,40 +339,14 @@ Selectorn find* är en kombination av waitFor och getBy*. Den är enklare att sk
 Vi ska alltid använda find\* när vi vill fråga efter någonting som kanske inte är tillgängligt direkt.
 
 ```typescript
-it("Fourth try with findBy", async () => {
+it("should call API and show search result", async () => {
   render(<App />);
   const inputElement = screen.getByPlaceholderText("Enter username");
   const searchButton = screen.getByText("Search");
 
-  expect(screen.queryByText("Searching...")).not.toBeInTheDocument();
-
   void userEvent.type(inputElement, "Testuser");
   void userEvent.click(searchButton);
 
-  expect(screen.getByText("Searching...")).toBeInTheDocument();
-  await screen.findByText("Search results for Testuser");
-  expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
-  expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);
-});
-```
-
-### Samma test uppdelat i AAA block
-
-Ibland tycker jag att det blir svårare att hänga med på vad som händer med stateuppdateringar när det ligger i det här formatet.
-I vissa fall tycker jag att det är enklare att läsa uppifrån och ned i testet och då lägga expect().not.toBeInTheDocument() innan vi gör vår sökning.
-
-```typescript
-it("AAA: Fourth try with findBy", async () => {
-  render(<App />);
-  const inputElement = screen.getByPlaceholderText("Enter username");
-  const searchButton = screen.getByText("Search");
-  const searchMessage = screen.queryByText("Searching...");
-
-  void userEvent.type(inputElement, "Testuser");
-  void userEvent.click(searchButton);
-
-  expect(searchMessage).not.toBeInTheDocument();
-  expect(screen.getByText("Searching...")).toBeInTheDocument();
   await screen.findByText("Search results for Testuser");
   expect(screen.getByText("Testuser Testsson")).toBeInTheDocument();
   expect(apiMock.fetchUser).toHaveBeenCalledTimes(1);

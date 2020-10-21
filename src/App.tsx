@@ -20,27 +20,25 @@ import "./App.css";
 
 const App = () => {
   const [query, setQuery] = useState("");
-  const [searchState, setSearchState] = useState<SearchState>("WAITING");
+  const [searchState, setSearchState] = useState<SearchState>("IDLE");
   const [searchResult, setSearchResult] = useState<Array<User>>([]);
 
   useEffect(() => {
-    const clearSearchResult = query === "" && searchState !== "WAITING";
-
-    if (clearSearchResult) {
-      setSearchState("WAITING");
+    if (query === "" && searchState === "FULFILLED") {
+      setSearchState("IDLE");
     }
   }, [query, searchState]);
 
   const handleSearch = async () => {
-    setSearchState("SEARCHING");
+    setSearchState("PENDING");
     setSearchResult([]);
 
     try {
       const users = await fetchUser(query);
       setSearchResult(users);
-      setSearchState("SUCCESS");
+      setSearchState("FULFILLED");
     } catch (_) {
-      setSearchState("ERROR");
+      setSearchState("REJECTED");
     }
   };
 
@@ -56,9 +54,9 @@ const App = () => {
         Search
       </button>
 
-      {searchState === "SEARCHING" && <p>Searching...</p>}
+      {searchState === "PENDING" && <p>Searching...</p>}
 
-      {searchState === "SUCCESS" && searchResult.length > 0 && (
+      {searchState === "FULFILLED" && searchResult.length > 0 && (
         <div>
           <h3>Search results for {query}</h3>
           {searchResult.map((item) => (
@@ -67,13 +65,13 @@ const App = () => {
         </div>
       )}
 
-      {searchState === "SUCCESS" && searchResult.length === 0 && (
+      {searchState === "FULFILLED" && searchResult.length === 0 && (
         <div>
           <h3>No search results for {query}</h3>
         </div>
       )}
 
-      {searchState === "ERROR" && (
+      {searchState === "REJECTED" && (
         <p style={{ color: "red" }}>Something went wrong</p>
       )}
     </div>
@@ -82,7 +80,7 @@ const App = () => {
 
 export default App;
 
-type SearchState = "WAITING" | "SEARCHING" | "ERROR" | "SUCCESS";
+type SearchState = "IDLE" | "PENDING" | "REJECTED" | "FULFILLED";
 
 interface User {
   username: string;

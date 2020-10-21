@@ -204,11 +204,11 @@ jest.mock("./apiRequest");
 const apiMock = api as jest.Mocked<typeof api>;
 
 beforeEach(() => {
-  apiMock.fetchUser.mockReset();
-
-  apiMock.fetchUser.mockImplementationOnce((query) =>
-    Promise.resolve([{ username: `${query} Testsson`, id: "1" }])
-  );
+  apiMock.fetchUser
+    .mockReset()
+    .mockImplementationOnce((query) =>
+      Promise.resolve([{ username: `${query} Testsson`, id: "1" }])
+    );
 });
 ```
 

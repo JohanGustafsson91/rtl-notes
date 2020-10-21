@@ -15,10 +15,11 @@ const apiMock = api as jest.Mocked<typeof api>;
 
 describe("App", () => {
   beforeEach(() => {
-    apiMock.fetchUser.mockReset();
-    apiMock.fetchUser.mockImplementationOnce((query) =>
-      Promise.resolve([{ username: `${query} Testsson`, id: "1" }])
-    );
+    apiMock.fetchUser
+      .mockReset()
+      .mockImplementationOnce((query) =>
+        Promise.resolve([{ username: `${query} Testsson`, id: "1" }])
+      );
   });
 
   it.skip("should call API", () => {

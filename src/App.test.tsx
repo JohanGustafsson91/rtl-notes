@@ -13,7 +13,7 @@ import App from "./App";
 jest.mock("./apiRequest");
 const apiMock = api as jest.Mocked<typeof api>;
 
-describe("App act warnings explained", () => {
+describe("App", () => {
   beforeEach(() => {
     apiMock.fetchUser.mockReset();
     apiMock.fetchUser.mockImplementationOnce((query) =>
@@ -58,7 +58,7 @@ describe("App act warnings explained", () => {
     });
   });
 
-  it.skip("should call API fix act warning", async () => {
+  it("should call API fix act warning", async () => {
     render(<App />);
     const inputElement = screen.getByPlaceholderText("Enter username");
     const searchButton = screen.getByText("Search");

@@ -23,7 +23,7 @@ const Counter = () => {
 // happens in the browser, we’ll wrap the code rendering and updating it into
 // ReactTestUtils.act() calls:
 
-describe("Counter", () => {
+describe("Counter with ReactDOM", () => {
   let container: null | HTMLDivElement;
 
   beforeEach(() => {
@@ -55,7 +55,9 @@ describe("Counter", () => {
     expect(label!.textContent).toBe("You clicked 1 times");
     expect(document.title).toBe("You clicked 1 times");
   });
+});
 
+describe("Counter with React Testing Library", () => {
   it("can render and update a counter", async () => {
     render(<Counter />);
 

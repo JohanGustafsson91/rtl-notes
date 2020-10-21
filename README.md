@@ -4,7 +4,7 @@
 2. Visa upp en sökapplikation som kommer vara grund för testerna vi går igenom.
 3. Köra samma test på olika sätt och förklara hur vi kan göra de bättre. Jag kommer ta med olika selectorer och förklara när de är bra att använda.
 
-# 1. Act
+# 1. Vad gör Act?
 
 Vi har en komponent:
 
@@ -76,7 +76,14 @@ Utan `act` så skulle testet ovan falera:
 - `document.title` skulle vara tom sträng efter första render eftersom `useEffect` inte har körts efter första renderingen.
 - `document.title` skulle vara "You clicked 0 times" efter första klicket på knappen.
 
-Händelser så som rendering, användarenhändelser eller hämtning av data kan ses som en enhet av interaktion i gränssnittet. `Act` säkerställer att alla uppdateringar relaterade till en händelse blir färdiga och finns i DOMen innan vi testar koden (dvs det som händer i webbläsaren). På det sättet så skriver vi tester som körs mer likt det som våra användare kommer uppleva när de användaren applikationen.
+Händelser så som rendering, användarenhändelser eller hämtning av data kan ses som en enhet av interaktion i gränssnittet. I exemplet ovan är ett exempel på en sådan enhet:
+
+1. Användaren trycker på knappen
+2. Räknaren uppdateras med ett via `useState`
+3. Appen renderas
+4. React kör vår sidoeffekt `useEffect` efter att DOMen har uppdaterats.
+
+`Act` säkerställer att alla uppdateringar relaterade till en händelse blir färdiga och finns i DOMen innan vi testar koden (dvs det som händer i webbläsaren). På det sättet så skriver vi tester som körs mer likt det som våra användare kommer uppleva när de användaren applikationen.
 
 Men vi använder React Testing Library som rekommenderat av React. När vi behöver vänta på att element ska dyka upp eller försvinna i DOMen, asynkron kod köras klart eller något annat som inte är tillgängligt direkt så har React Testing Library asynkrona hjälpfunktioner för det.
 
